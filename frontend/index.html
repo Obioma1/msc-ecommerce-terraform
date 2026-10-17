@@ -1,0 +1,466 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MSc E-Commerce Store</title>
+
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#f4f6f8;color:#222}
+header{background:#232f3e;color:#fff;padding:18px 8%;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:10}
+header h1{margin:0;font-size:24px}
+.cart-button{margin:0;background:#ff9900;color:#111;border:0;padding:11px 18px;border-radius:7px;font-weight:700;cursor:pointer}
+.hero{text-align:center;padding:35px 20px 15px}
+.hero h2{margin-bottom:8px}
+#status{text-align:center;margin:20px}
+.products{width:85%;max-width:1200px;margin:20px auto 50px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:24px}
+.product-card{background:#fff;border-radius:10px;padding:18px;box-shadow:0 2px 8px rgba(0,0,0,.12);text-align:center}
+.product-card img{width:100%;height:180px;object-fit:contain;margin-bottom:12px}
+.product-card h3{margin:8px 0}
+.description{color:#555;min-height:40px}
+.price{font-size:21px;font-weight:700;margin:12px 0 5px}
+.stock{color:#555;font-size:14px}
+.action{margin-top:12px;background:#ff9900;border:0;padding:10px 18px;border-radius:6px;cursor:pointer;font-weight:700}
+.action:hover,.cart-button:hover{background:#e68a00}
+.action:disabled{background:#ccc;cursor:not-allowed}
+.secondary{background:#e5e7eb}
+.secondary:hover{background:#d1d5db}
+.danger{background:#d9534f;color:#fff}
+.danger:hover{background:#c9302c}
+footer{text-align:center;padding:20px;background:#232f3e;color:#fff}
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:20;padding:20px;overflow:auto}
+.panel{background:#fff;max-width:760px;margin:40px auto;border-radius:12px;padding:24px;box-shadow:0 8px 30px rgba(0,0,0,.25)}
+.panel-head{display:flex;justify-content:space-between;align-items:center;gap:15px}
+.close{font-size:28px;background:none;border:0;cursor:pointer}
+.cart-row{display:grid;grid-template-columns:1fr auto auto;gap:14px;align-items:center;padding:14px 0;border-bottom:1px solid #ddd}
+.qty{display:flex;align-items:center;gap:8px}
+.qty button{margin:0;padding:5px 10px}
+.summary{display:flex;justify-content:space-between;font-size:20px;font-weight:700;margin-top:20px}
+.panel-actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+.notice{padding:12px;border-radius:7px;margin:12px 0;background:#eef6ff}
+.success{background:#e9f7ef}
+.error{background:#fdecec}
+.muted{color:#666;font-size:14px}
+@media(max-width:650px){
+ header{padding:15px 5%}
+ header h1{font-size:19px}
+ .products{width:92%}
+ .cart-row{grid-template-columns:1fr}
+ .panel{margin:10px auto}
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <h1>MSc E-Commerce Store</h1>
+  <button class="cart-button" onclick="openCart()">
+    Cart: <span id="cartCount">0</span>
+  </button>
+</header>
+
+<section class="hero">
+  <h2>Our Products</h2>
+  <p>Serverless e-commerce prototype</p>
+</section>
+
+<div id="status">Loading products...</div>
+<main id="products" class="products"></main>
+
+<footer>MSc Cloud Computing Research Prototype</footer>
+
+<div id="cartOverlay" class="overlay">
+  <section class="panel">
+    <div class="panel-head">
+      <div>
+        <h2>Your Cart</h2>
+        <div class="muted">
+          Cart ID: <span id="cartIdText"></span>
+        </div>
+      </div>
+      <button class="close" onclick="closeCart()">&times;</button>
+    </div>
+
+    <div id="cartMessage"></div>
+    <div id="cartItems"></div>
+
+    <div class="summary">
+      <span>Total</span>
+      <span id="cartTotal">£0.00</span>
+    </div>
+
+    <div class="panel-actions">
+      <button class="action secondary" onclick="closeCart()">Continue Shopping</button>
+      <button id="checkoutBtn" class="action" onclick="checkout()">Checkout / Place Order</button>
+    </div>
+  </section>
+</div>
+
+<div id="orderOverlay" class="overlay">
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Order Confirmation</h2>
+      <button class="close" onclick="closeOrder()">&times;</button>
+    </div>
+
+    <div id="orderConfirmation" class="notice success"></div>
+
+    <div class="panel-actions">
+      <button class="action" onclick="finishOrder()">Continue Shopping</button>
+    </div>
+  </section>
+</div>
+
+<script>
+const API_BASE = '__API_GATEWAY_URL__';
+
+let products = [];
+let productMap = {};
+let cartItems = [];
+
+let cartId = localStorage.getItem('mscCartId') ||
+             ('WEB' + Date.now().toString().slice(-10));
+
+localStorage.setItem('mscCartId', cartId);
+
+document.getElementById('cartIdText').textContent = cartId;
+
+async function api(path, options = {}) {
+  const response = await fetch(API_BASE + path, {
+    headers: {
+      'Content-Type': 'application/json',
+      ...(options.headers || {})
+    },
+    ...options
+  });
+
+  const text = await response.text();
+  let data = null;
+
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = text;
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      (data && data.message) ||
+      `Request failed (${response.status})`
+    );
+  }
+
+  return data;
+}
+
+async function loadProducts() {
+  const status = document.getElementById('status');
+  const container = document.getElementById('products');
+
+  try {
+    products = await api('/products');
+
+    productMap = Object.fromEntries(
+      products.map(p => [p.ProductId, p])
+    );
+
+    status.style.display = 'none';
+    container.innerHTML = '';
+
+    products.forEach(p => {
+      const card = document.createElement('div');
+      card.className = 'product-card';
+
+      // Create image separately to preserve the signed S3 URL.
+      const img = document.createElement('img');
+      img.src = p.ImageUrl || '';
+      img.alt = p.Name || 'Product image';
+      img.loading = 'lazy';
+
+      card.appendChild(img);
+
+      const details = document.createElement('div');
+
+      details.innerHTML = `
+        <h3>${escapeHtml(p.Name)}</h3>
+        <p class="description">${escapeHtml(p.Description || '')}</p>
+        <p class="price">£${money(p.Price)}</p>
+        <p class="stock">Stock: ${Number(p.StockQuantity)}</p>
+      `;
+
+      card.appendChild(details);
+
+      const addButton = document.createElement('button');
+      addButton.className = 'action';
+      addButton.textContent = 'Add to Cart';
+      addButton.disabled = Number(p.StockQuantity) <= 0;
+      addButton.addEventListener('click', () => addToCart(p.ProductId));
+
+      card.appendChild(addButton);
+      container.appendChild(card);
+    });
+
+    await refreshCart(false);
+
+  } catch (e) {
+    console.error(e);
+    status.textContent = 'Unable to load products. Please try again.';
+  }
+}
+
+async function addToCart(productId) {
+  try {
+    await api('/cart', {
+      method: 'POST',
+      body: JSON.stringify({
+        CartId: cartId,
+        ProductId: productId,
+        Quantity: 1
+      })
+    });
+
+    await refreshCart(false);
+
+  } catch (e) {
+    alert('Could not add item to cart: ' + e.message);
+  }
+}
+
+async function refreshCart(showErrors = true) {
+  try {
+    const cart = await api('/cart/' + encodeURIComponent(cartId));
+
+    cartItems = Array.isArray(cart.Items) ? cart.Items : [];
+
+  } catch (e) {
+    cartItems = [];
+
+    if (showErrors && !/404|not found/i.test(e.message)) {
+      showCartMessage(e.message, 'error');
+    }
+  }
+
+  updateCartCount();
+  renderCart();
+}
+
+function updateCartCount() {
+  document.getElementById('cartCount').textContent =
+    cartItems.reduce(
+      (sum, item) => sum + Number(item.Quantity || 0),
+      0
+    );
+}
+
+async function openCart() {
+  document.getElementById('cartOverlay').style.display = 'block';
+  document.getElementById('cartIdText').textContent = cartId;
+  await refreshCart(true);
+}
+
+function closeCart() {
+  document.getElementById('cartOverlay').style.display = 'none';
+}
+
+function closeOrder() {
+  document.getElementById('orderOverlay').style.display = 'none';
+}
+
+function renderCart() {
+  const box = document.getElementById('cartItems');
+  box.innerHTML = '';
+
+  if (!cartItems.length) {
+    box.innerHTML = '<p>Your cart is empty.</p>';
+    document.getElementById('cartTotal').textContent = '£0.00';
+    document.getElementById('checkoutBtn').disabled = true;
+    return;
+  }
+
+  document.getElementById('checkoutBtn').disabled = false;
+
+  cartItems.forEach(item => {
+    const p = productMap[item.ProductId] || {
+      Name: item.ProductId,
+      Price: 0
+    };
+
+    const q = Number(item.Quantity || 0);
+
+    const row = document.createElement('div');
+    row.className = 'cart-row';
+
+    row.innerHTML = `
+      <div>
+        <strong>${escapeHtml(p.Name)}</strong>
+        <div class="muted">£${money(p.Price)} each</div>
+      </div>
+
+      <div class="qty">
+        <button class="action secondary"
+          onclick="changeQuantity('${item.ProductId}', -1)">−</button>
+        <strong>${q}</strong>
+        <button class="action secondary"
+          onclick="changeQuantity('${item.ProductId}', 1)">+</button>
+      </div>
+
+      <button class="action danger"
+        onclick="removeItem('${item.ProductId}')">Remove</button>
+    `;
+
+    box.appendChild(row);
+  });
+
+  document.getElementById('cartTotal').textContent =
+    '£' + money(calculateTotal());
+}
+
+function calculateTotal() {
+  return cartItems.reduce(
+    (sum, item) =>
+      sum +
+      Number(productMap[item.ProductId]?.Price || 0) *
+      Number(item.Quantity || 0),
+    0
+  );
+}
+
+async function changeQuantity(productId, delta) {
+  const next = cartItems.map(item => ({
+    ...item,
+    Quantity: Number(item.Quantity)
+  }));
+
+  const item = next.find(i => i.ProductId === productId);
+
+  if (!item) return;
+
+  item.Quantity += delta;
+
+  const filtered = next.filter(i => i.Quantity > 0);
+
+  await rebuildCart(filtered);
+}
+
+async function removeItem(productId) {
+  await rebuildCart(
+    cartItems.filter(item => item.ProductId !== productId)
+  );
+}
+
+async function rebuildCart(items) {
+  try {
+    await api('/cart/' + encodeURIComponent(cartId), {
+      method: 'DELETE'
+    });
+
+    for (const item of items) {
+      await api('/cart', {
+        method: 'POST',
+        body: JSON.stringify({
+          CartId: cartId,
+          ProductId: item.ProductId,
+          Quantity: Number(item.Quantity)
+        })
+      });
+    }
+
+    await refreshCart(true);
+
+  } catch (e) {
+    showCartMessage('Cart update failed: ' + e.message, 'error');
+  }
+}
+
+async function checkout() {
+  if (!cartItems.length) return;
+
+  const total = Number(calculateTotal().toFixed(2));
+  const orderId = 'WEBORD' + Date.now();
+
+  try {
+    const order = await api('/orders', {
+      method: 'POST',
+      body: JSON.stringify({
+        OrderId: orderId,
+        CartId: cartId,
+        TotalAmount: total
+      })
+    });
+
+    closeCart();
+
+    document.getElementById('orderConfirmation').innerHTML = `
+      <strong>Order placed successfully.</strong>
+      <p>Order ID: ${escapeHtml(order.OrderId || orderId)}</p>
+      <p>Cart ID: ${escapeHtml(order.CartId || cartId)}</p>
+      <p>Total: £${money(order.TotalAmount ?? total)}</p>
+    `;
+
+    document.getElementById('orderOverlay').style.display = 'block';
+
+  } catch (e) {
+    showCartMessage('Checkout failed: ' + e.message, 'error');
+  }
+}
+
+async function finishOrder() {
+  try {
+    await api('/cart/' + encodeURIComponent(cartId), {
+      method: 'DELETE'
+    });
+  } catch (e) {
+    console.warn(e);
+  }
+
+  cartId = 'WEB' + Date.now().toString().slice(-10);
+
+  localStorage.setItem('mscCartId', cartId);
+
+  cartItems = [];
+  updateCartCount();
+  renderCart();
+
+  document.getElementById('cartIdText').textContent = cartId;
+
+  closeOrder();
+}
+
+function showCartMessage(message, type = 'notice') {
+  const el = document.getElementById('cartMessage');
+
+  el.className = 'notice ' + type;
+  el.textContent = message;
+
+  setTimeout(() => {
+    el.textContent = '';
+    el.className = '';
+  }, 5000);
+}
+
+function money(value) {
+  return Number(value || 0).toFixed(2);
+}
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(
+    /[&<>'"]/g,
+    character => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      "'": '&#39;',
+      '"': '&quot;'
+    }[character])
+  );
+}
+
+loadProducts();
+</script>
+
+</body>
+</html>
+

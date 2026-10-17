@@ -1,0 +1,45 @@
+
+# Terraform provider downloads and local files
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+tfplan
+*.tfvars
+*.tfvars.json
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Local credentials and environment settings
+.env
+.env.*
+*.pem
+*.key
+.aws/
+
+# Python temporary files
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Editor and operating system files
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Local debugging files
+ec2-debug.txt
+ec2-console*.json
+ec2-console*.txt
+ec2-startup-log.txt
+ec2-latest-console.txt
+
+# Local backup files
+README-backup.md
+*.checkpoint
+
