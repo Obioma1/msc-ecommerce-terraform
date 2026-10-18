@@ -76,7 +76,7 @@ resource "aws_dynamodb_table_item" "product_laptop" {
       N = "799.99"
     }
     StockQuantity = {
-      N = "25"
+      N = "100000"
     }
     ImageKey = {
       S = "laptop.jpg"
@@ -102,7 +102,7 @@ resource "aws_dynamodb_table_item" "product_smartphone" {
       N = "599.99"
     }
     StockQuantity = {
-      N = "40"
+      N = "100000"
     }
     ImageKey = {
       S = "smartphone.jpg"
@@ -128,7 +128,7 @@ resource "aws_dynamodb_table_item" "product_headphones" {
       N = "129.99"
     }
     StockQuantity = {
-      N = "60"
+      N = "100000"
     }
     ImageKey = {
       S = "headphones.jpg"
@@ -154,7 +154,7 @@ resource "aws_dynamodb_table_item" "product_monitor" {
       N = "249.99"
     }
     StockQuantity = {
-      N = "30"
+      N = "100000"
     }
     ImageKey = {
       S = "monitor.jpg"
@@ -180,7 +180,7 @@ resource "aws_dynamodb_table_item" "product_keyboard" {
       N = "69.99"
     }
     StockQuantity = {
-      N = "50"
+      N = "100000"
     }
     ImageKey = {
       S = "keyboard.jpg"
