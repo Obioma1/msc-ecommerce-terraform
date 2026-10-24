@@ -1,0 +1,7 @@
+Method,Name,Error,Occurrences,First Seen,Last Seen
+POST,POST /cart,HTTPError('504 Server Error: Gateway Time-out for url: POST /cart'),137,2026-10-16T18:18:48Z,2026-10-16T18:20:53Z
+GET,GET /cart/{id},RemoteDisconnected('Remote end closed connection without response'),1,2026-10-16T18:20:04Z,2026-10-16T18:20:04Z
+POST,POST /orders,HTTPError('404 Client Error: NOT FOUND for url: POST /orders'),133,2026-10-16T18:18:50Z,2026-10-16T18:21:02Z
+GET,GET /products,HTTPError('504 Server Error: Gateway Time-out for url: GET /products'),141,2026-10-16T18:18:51Z,2026-10-16T18:20:54Z
+POST,POST /orders,HTTPError('504 Server Error: Gateway Time-out for url: POST /orders'),145,2026-10-16T18:18:41Z,2026-10-16T18:21:27Z
+GET,GET /cart/{id},HTTPError('504 Server Error: Gateway Time-out for url: GET /cart/{id}'),152,2026-10-16T18:18:41Z,2026-10-16T18:20:54Z
