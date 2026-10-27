@@ -12,6 +12,7 @@ resource "aws_apigatewayv2_api" "ecommerce" {
     allow_methods = [
       "GET",
       "POST",
+      "DELETE",
       "OPTIONS"
     ]
 
@@ -75,6 +76,13 @@ resource "aws_apigatewayv2_route" "post_cart" {
 resource "aws_apigatewayv2_route" "get_cart" {
   api_id    = aws_apigatewayv2_api.ecommerce.id
   route_key = "GET /cart/{id}"
+  target    = "integrations/${aws_apigatewayv2_integration.cart.id}"
+}
+
+# Allow the frontend to delete/rebuild carts when quantities change.
+resource "aws_apigatewayv2_route" "delete_cart" {
+  api_id    = aws_apigatewayv2_api.ecommerce.id
+  route_key = "DELETE /cart/{id}"
   target    = "integrations/${aws_apigatewayv2_integration.cart.id}"
 }
 
