@@ -75,7 +75,6 @@ msc-ecommerce-terraform/
 ├── README.md
 ├── *.tf
 ├── ec2/
-│   ├── app.py
 │   └── user_data.sh
 ├── lambda/
 │   ├── get_products/
